@@ -1,15 +1,49 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 import pandas as pd
 import os
 import magic
 import math
+import json
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# File to store file metadata
+METADATA_FILE = os.path.join(UPLOAD_FOLDER, 'file_metadata.json')
+
+def load_metadata():
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE, 'r') as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+    return {}
+
+def save_metadata(metadata):
+    with open(METADATA_FILE, 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+def update_file_metadata(filename, action='add'):
+    metadata = load_metadata()
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    
+    if action == 'add' and os.path.exists(filepath):
+        stats = os.stat(filepath)
+        metadata[filename] = {
+            'uploaded_at': datetime.now().isoformat(),
+            'size': stats.st_size,
+            'rows': sum(1 for _ in open(filepath, 'r', encoding='utf-8')) - 1  # Exclude header
+        }
+    elif action == 'delete' and filename in metadata:
+        del metadata[filename]
+    
+    save_metadata(metadata)
 
 # Allowed file extensions and their MIME types
 ALLOWED_EXTENSIONS = {'csv'}
@@ -49,6 +83,9 @@ def upload_file():
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
         
+        # Update file metadata
+        update_file_metadata(filename, 'add')
+        
         # Read just the first 10 rows to get column info
         df_sample = pd.read_csv(filepath, nrows=10)
         columns = df_sample.columns.tolist()
@@ -73,6 +110,9 @@ def get_data():
     try:
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+            
         # Calculate rows to skip
         skip_rows = (page - 1) * rows_per_page
         
@@ -93,6 +133,59 @@ def get_data():
         })
     except Exception as e:
         return jsonify({'error': f'Error reading data: {str(e)}'}), 500
+
+@app.route('/list_files', methods=['GET'])
+def list_files():
+    try:
+        metadata = load_metadata()
+        files = []
+        
+        for filename in os.listdir(UPLOAD_FOLDER):
+            if filename == os.path.basename(METADATA_FILE):
+                continue
+                
+            file_info = metadata.get(filename, {
+                'uploaded_at': datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, filename))).isoformat(),
+                'size': os.path.getsize(os.path.join(UPLOAD_FOLDER, filename))
+            })
+            
+            files.append({
+                'name': filename,
+                'uploaded_at': file_info.get('uploaded_at'),
+                'size': file_info.get('size'),
+                'rows': file_info.get('rows', 'N/A')
+            })
+        
+        # Sort by upload time (newest first)
+        files.sort(key=lambda x: x['uploaded_at'], reverse=True)
+        
+        return jsonify({'files': files})
+    except Exception as e:
+        return jsonify({'error': f'Error listing files: {str(e)}'}), 500
+
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    try:
+        return send_from_directory(
+            UPLOAD_FOLDER,
+            filename,
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'error': f'Error downloading file: {str(e)}'}), 500
+
+@app.route('/delete/<filename>', methods=['DELETE'])
+def delete_file(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            update_file_metadata(filename, 'delete')
+            return jsonify({'message': 'File deleted successfully'})
+        return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        return jsonify({'error': f'Error deleting file: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
