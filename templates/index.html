@@ -11,6 +11,56 @@
         }
         body {
             overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Dark mode styles */
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #1a1a1a;
+            --bs-body-color: #e0e0e0;
+            --bs-secondary-bg: #2d2d2d;
+            --bs-tertiary-bg: #333;
+            --bs-border-color: #444;
+        }
+        
+        [data-bs-theme="dark"] .sidebar {
+            background-color: #212529;
+            border-right-color: #444;
+        }
+        
+        [data-bs-theme="dark"] .file-item {
+            background-color: #2d2d2d;
+            border-color: #444;
+        }
+        
+        [data-bs-theme="dark"] .file-item:hover {
+            background-color: #3a3a3a;
+        }
+        
+        [data-bs-theme="dark"] .file-item.active {
+            background-color: #0d6efd;
+        }
+        
+        [data-bs-theme="dark"] .form-control, 
+        [data-bs-theme="dark"] .form-control:focus,
+        [data-bs-theme="dark"] .table {
+            background-color: var(--bs-secondary-bg);
+            color: var(--bs-body-color);
+            border-color: var(--bs-border-color);
+        }
+        
+        [data-bs-theme="dark"] .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--bs-body-color);
+            --bs-table-striped-color: var(--bs-body-color);
+            --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+            --bs-table-hover-color: var(--bs-body-color);
+            --bs-table-hover-bg: rgba(0, 0, 0, 0.1);
+        }
+        
+        [data-bs-theme="dark"] .card {
+            background-color: var(--bs-secondary-bg);
+            border-color: var(--bs-border-color);
         }
         .sidebar {
             width: var(--sidebar-width);
@@ -118,7 +168,12 @@
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <h4>CSV Files</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">CSV Files</h4>
+            <button id="themeToggle" class="btn btn-sm btn-outline-secondary" title="Toggle Dark Mode">
+                <i class="bi bi-moon-stars"></i>
+            </button>
+        </div>
         <div class="mb-3">
             <form id="uploadForm" class="mb-3">
                 <div class="input-group">
@@ -222,6 +277,38 @@
         // Constants
         const MAX_FILE_SIZE_MB = 10;
         const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+        
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('i');
+        
+        // Check for saved theme preference or use system preference
+        const savedTheme = localStorage.getItem('theme') || 
+                          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        // Apply the saved theme
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+        
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+        
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.className = 'bi bi-sun';
+                themeToggle.title = 'Switch to Light Mode';
+            } else {
+                themeIcon.className = 'bi bi-moon-stars';
+                themeToggle.title = 'Switch to Dark Mode';
+            }
+        }
         
         // Update max file size display
         document.getElementById('maxFileSize').textContent = MAX_FILE_SIZE_MB;
