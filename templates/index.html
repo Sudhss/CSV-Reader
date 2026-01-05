@@ -123,9 +123,13 @@
             <form id="uploadForm" class="mb-3">
                 <div class="input-group">
                     <input type="file" id="csvFile" name="file" accept=".csv" class="form-control form-control-sm" required>
-                    <button type="submit" class="btn btn-primary btn-sm">
+                    <button type="submit" class="btn btn-primary btn-sm" id="uploadBtn">
                         <i class="bi bi-upload"></i>
                     </button>
+                </div>
+                <div class="form-text text-muted small">
+                    Maximum file size: <span id="maxFileSize">10</span>MB
+                    <span id="fileSizeError" class="text-danger d-none"></span>
                 </div>
             </form>
         </div>
@@ -215,6 +219,13 @@
             };
             return new Date(dateString).toLocaleString(undefined, options);
         }
+        // Constants
+        const MAX_FILE_SIZE_MB = 10;
+        const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+        
+        // Update max file size display
+        document.getElementById('maxFileSize').textContent = MAX_FILE_SIZE_MB;
+        
         let currentFile = null;
         let currentPage = 1;
         let totalPages = 1;
@@ -368,10 +379,37 @@
             
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
+            const fileSizeError = document.getElementById('fileSizeError');
+            
+            // Add file input change handler to show file size
+            document.getElementById('csvFile').addEventListener('change', function() {
+                const file = this.files[0];
+                const fileSizeError = document.getElementById('fileSizeError');
+                
+                if (file && file.size > MAX_FILE_SIZE_BYTES) {
+                    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    fileSizeError.textContent = ` (${fileSizeMB}MB exceeds maximum ${MAX_FILE_SIZE_MB}MB)`;
+                    fileSizeError.classList.remove('d-none');
+                    this.value = '';  // Clear the file input
+                } else {
+                    fileSizeError.classList.add('d-none');
+                }
+            });    
             
             if (!file) {
                 showError('Please select a file to upload');
                 return;
+            }
+            
+            // Client-side file size validation
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                fileSizeError.textContent = ` (${fileSizeMB}MB exceeds maximum ${MAX_FILE_SIZE_MB}MB)`;
+                fileSizeError.classList.remove('d-none');
+                fileInput.focus();
+                return;
+            } else {
+                fileSizeError.classList.add('d-none');
             }
             
             const formData = new FormData();

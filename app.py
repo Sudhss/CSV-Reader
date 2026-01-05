@@ -7,11 +7,15 @@ import json
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
+# Configuration
+MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB limit
+
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # File to store file metadata
 METADATA_FILE = os.path.join(UPLOAD_FOLDER, 'file_metadata.json')
@@ -72,6 +76,17 @@ def upload_file():
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file.'}), 400
+        
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # Reset file pointer
+    
+    if file_size > MAX_CONTENT_LENGTH:
+        return jsonify({
+            'error': f'File too large. Maximum size is {MAX_CONTENT_LENGTH/1024/1024:.1f}MB'
+        }), 413
+        
     if not allowed_file(file.filename):
         return jsonify({'error': 'Invalid file type. Please upload a CSV file.'}), 400
     if not is_csv(file):
