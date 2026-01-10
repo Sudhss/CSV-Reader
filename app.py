@@ -41,8 +41,8 @@ def update_file_metadata(filename, action='add'):
         stats = os.stat(filepath)
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                row_count = sum(1 for _ in f) - 1  # Exclude header
-                if row_count < 0:  # Handle empty file
+                row_count = sum(1 for _ in f) - 1  
+                if row_count < 0:  
                     row_count = 0
         except Exception as e:
             print(f"Error counting rows in {filename}: {e}")
@@ -51,15 +51,13 @@ def update_file_metadata(filename, action='add'):
         metadata[filename] = {
             'uploaded_at': datetime.now().isoformat(),
             'size': stats.st_size,
-            'size_mb': round(stats.st_size / (1024 * 1024), 2),  # Add size in MB
-            'rows': row_count
+            'size_mb': round(stats.st_size / (1024 * 1024), 2),  
         }
     elif action == 'delete' and filename in metadata:
         del metadata[filename]
     
     save_metadata(metadata)
 
-# Allowed file extensions and their MIME types
 ALLOWED_EXTENSIONS = {'csv'}
 ALLOWED_MIME_TYPES = {'text/csv', 'text/plain', 'application/csv', 'application/octet-stream'}
 
@@ -68,10 +66,10 @@ def allowed_file(filename):
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS)
 
 def is_csv(file):
-    # Check MIME type of the file
+
     file_mime = magic.Magic(mime=True)
     mime_type = file_mime.from_buffer(file.read(1024))
-    file.seek(0)  # Reset file pointer
+    file.seek(0) 
     return mime_type in ALLOWED_MIME_TYPES
 
 @app.route('/', methods=['GET'])
@@ -87,10 +85,9 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No selected file.'}), 400
         
-    # Check file size
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
-    file.seek(0)  # Reset file pointer
+    file.seek(0) 
     
     if file_size > MAX_CONTENT_LENGTH:
         return jsonify({
