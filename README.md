@@ -1,6 +1,6 @@
 # CSV Reader 
 
-Ever get a janky CSV file and just wanna see the data without all the headache? This bad boy takes your uploaded CSV and gives you a clean, easy-to-read table right away. No cap.
+Ever get a janky CSV file and just wanna see the data without all the headache? This bad boy takes your uploaded CSV and gives you a clean, easy-to-read table right away.
 
 ###  Features
 
