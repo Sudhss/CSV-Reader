@@ -254,13 +254,20 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
-        // Format file size
+        // Format file size with improved precision and unit selection
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
+            const units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+            const size = bytes / Math.pow(k, i);
+            
+            // Show 0 decimal places for bytes, 1 for KB, and 2 for MB/GB/TB
+            const decimalPlaces = i === 0 ? 0 : (i === 1 ? 1 : 2);
+            const formattedSize = size.toFixed(decimalPlaces);
+            
+            // Remove trailing .0 or .00 if not needed
+            return formattedSize.replace(/\.?0+$/, '') + ' ' + units[i];
         }
         
         // Format date

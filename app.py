@@ -39,10 +39,20 @@ def update_file_metadata(filename, action='add'):
     
     if action == 'add' and os.path.exists(filepath):
         stats = os.stat(filepath)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                row_count = sum(1 for _ in f) - 1  # Exclude header
+                if row_count < 0:  # Handle empty file
+                    row_count = 0
+        except Exception as e:
+            print(f"Error counting rows in {filename}: {e}")
+            row_count = 0
+            
         metadata[filename] = {
             'uploaded_at': datetime.now().isoformat(),
             'size': stats.st_size,
-            'rows': sum(1 for _ in open(filepath, 'r', encoding='utf-8')) - 1  # Exclude header
+            'size_mb': round(stats.st_size / (1024 * 1024), 2),  # Add size in MB
+            'rows': row_count
         }
     elif action == 'delete' and filename in metadata:
         del metadata[filename]
